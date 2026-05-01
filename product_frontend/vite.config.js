@@ -9,12 +9,12 @@ const API = "https://itspriceradar.netlify.app/";
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
-    proxy: {
-      "/api": {
-        target: API,
-        changeOrigin: true,
-        secure: false,
-      }
-    }
+    //    proxy: {
+    //     "/api": {
+    //       target: API,
+    //      changeOrigin: true,
+    //      secure: false,
+    //   }
+    //  }
   }
 })

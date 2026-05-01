@@ -100,8 +100,7 @@ function SearchBar({ setProducts, setQuery, query,setSearchquery, loading, setLo
     try {
       // 10.0.2.2 works ONLY for Android emulator, using local IP makes it work on physical devices too.
       // Use relative URL in dev (Vite proxy) → full URL in prod/native (no CORS issue)
-      const isNative = Capacitor.isNativePlatform();
-      const apiBase = (import.meta.env.PROD || isNative) ? "https://itspriceradar.netlify.app" : "";
+      const apiBase = "https://priceradar-j3op.onrender.com";
       const apiUrl = `${apiBase}/api/scrape?query=${encodeURIComponent(value)}`;
         
       const res = await axios.get(apiUrl);

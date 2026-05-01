@@ -7,9 +7,7 @@ import axios from 'axios';
 // Dev: use relative URL → Vite proxy forwards to Netlify (no CORS)
 // Prod/Mobile: use full URL directly
 const isNativeOrProd = import.meta.env.PROD;
-const BASE = isNativeOrProd 
-  ? "https://itspriceradar.netlify.app" 
-  : "";
+const BASE = "https://priceradar-j3op.onrender.com";
 const API_URL = `${BASE}/api/auth`;
 
 const WORLD_MAP = [
@@ -181,18 +179,18 @@ function AuthFlow({ onComplete }) {
     setLoading(true);
     setError('');
     try {
-      const response = await axios.post(`${API_URL}/verify-otp`, { 
-        email, 
-        otp: otp.join('') 
+      const response = await axios.post(`${API_URL}/verify-otp`, {
+        email,
+        otp: otp.join('')
       });
-      
+
       const { token, user } = response.data;
       localStorage.setItem('pr_token', token);
       localStorage.setItem('pr_user', JSON.stringify(user));
       setUser(user);
 
       setStep('verified');
-      
+
       // After verification animation, check if we need onboarding
       setTimeout(() => {
         if (!user.onboarded) {
@@ -217,16 +215,16 @@ function AuthFlow({ onComplete }) {
     setError('');
     try {
       const token = localStorage.getItem('pr_token');
-      const response = await axios.put(`${API_URL}/onboard`, 
+      const response = await axios.put(`${API_URL}/onboard`,
         { name },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
+
       const updatedUser = response.data.user;
       localStorage.setItem('pr_user', JSON.stringify(updatedUser));
       setUser(updatedUser);
       setStep('complete');
-      
+
       setTimeout(() => onComplete(updatedUser), 2000);
     } catch (err) {
       setError("Failed to save profile.");
@@ -270,7 +268,7 @@ function AuthFlow({ onComplete }) {
         {/* Branding (Hidden during success states on mobile) */}
         <AnimatePresence>
           {(step === 'email' || step === 'otp') && (
-            <motion.div 
+            <motion.div
               exit={{ opacity: 0, x: -50 }}
               className="w-full md:w-1/2 mb-16 md:mb-0"
             >
@@ -300,7 +298,7 @@ function AuthFlow({ onComplete }) {
         {/* Interactive Content Area */}
         <div className={`w-full ${step === 'email' || step === 'otp' ? 'md:w-[420px]' : 'max-w-xl mx-auto'}`}>
           <AnimatePresence mode="wait">
-            
+
             {/* EMAIL STEP */}
             {step === 'email' && (
               <motion.div
@@ -404,9 +402,9 @@ function AuthFlow({ onComplete }) {
                         {loading ? <Loader2 className="animate-spin" /> : "AUTHENTICATE"}
                       </span>
                     </button>
-                    
-                    <button 
-                      type="button" 
+
+                    <button
+                      type="button"
                       onClick={() => setStep('email')}
                       className="text-neutral-600 font-mono text-[10px] mt-6 hover:text-neutral-400"
                     >
@@ -426,7 +424,7 @@ function AuthFlow({ onComplete }) {
                 exit={{ opacity: 0, y: -50 }}
                 className="text-center"
               >
-                <motion.div 
+                <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: [0, 1.2, 1] }}
                   transition={{ duration: 0.8, ease: "backOut" }}
@@ -436,7 +434,7 @@ function AuthFlow({ onComplete }) {
                 </motion.div>
                 <h2 className="text-white text-4xl font-bold tracking-tighter mb-4">VERIFICATION_SUCCESSFUL</h2>
                 <div className="flex justify-center items-center gap-2 text-[#00ff9d] font-mono tracking-widest text-sm">
-                  <motion.div 
+                  <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                   >
@@ -457,7 +455,7 @@ function AuthFlow({ onComplete }) {
               >
                 <div className="bg-[#0a0a0a] border border-neutral-800 p-10 relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-[#00ff9d]/5 blur-3xl rounded-full"></div>
-                  
+
                   <h2 className="text-white text-3xl font-bold mb-2">WELCOME OPERATOR</h2>
                   <p className="text-neutral-500 font-mono text-xs mb-10 tracking-widest uppercase">PLEASE_INITIALIZE_YOUR_IDENTITY</p>
 
@@ -498,7 +496,7 @@ function AuthFlow({ onComplete }) {
               >
                 <div className="relative w-48 h-48 mx-auto mb-12">
                   {/* Radar Pulse Effect */}
-                  <motion.div 
+                  <motion.div
                     animate={{ scale: [1, 2], opacity: [1, 0] }}
                     transition={{ duration: 2, repeat: Infinity }}
                     className="absolute inset-0 border-4 border-[#00ff9d] rounded-full"
