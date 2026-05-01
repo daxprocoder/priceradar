@@ -1,5 +1,9 @@
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+import dns from "dns";
+
+// Fix for Render IPv6 ENETUNREACH Error
+dns.setDefaultResultOrder("ipv4first");
 
 dotenv.config();
 
@@ -8,6 +12,7 @@ const transporter = nodemailer.createTransport({
   port: 587,
   secure: false, // true for 465, false for 587
   requireTLS: true,
+  localAddress: '0.0.0.0', // Forces IPv4 socket
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
