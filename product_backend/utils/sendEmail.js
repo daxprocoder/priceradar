@@ -8,14 +8,7 @@ dns.setDefaultResultOrder("ipv4first");
 dotenv.config();
 
 const transporter = nodemailer.createTransport({
-  host: "142.250.114.108", // Hardcoded IPv4 to bypass Render DNS/IPv6 block
-  port: 587,
-  secure: false,
-  requireTLS: true,
-  tls: {
-    servername: "smtp.gmail.com", // Prevent SSL certificate mismatch
-    rejectUnauthorized: false,
-  },
+  service: "gmail",
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
