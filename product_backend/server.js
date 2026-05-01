@@ -19,15 +19,8 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ─── MASTER CORS FIX ───────────────────────────────────────────────────────// Global CORS - Allow everything for Mobile/Vercel
-app.use(cors({
-  origin: "*",
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"]
-}));
-
-app.options("*", cors()); // Enable preflight for all routes
+// ─── MASTER CORS FIX ───────────────────────────────────────────────────────
+app.use(cors());
 
 app.use(express.json());
 app.use(cookieParser());
