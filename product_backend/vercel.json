@@ -11,24 +11,18 @@
       ]
     }
   ],
+  "rewrites": [
+    { "source": "/api/auth/(.*)", "destination": "/server.js" },
+    { "source": "/api/scrape(.*)", "destination": "/server.js" },
+    { "source": "/api/user/(.*)", "destination": "/server.js" },
+    { "source": "/api/admin/(.*)", "destination": "/server.js" },
+    { "source": "/api/alerts/(.*)", "destination": "/server.js" },
+    { "source": "/admin", "destination": "/server.js" }
+  ],
   "builds": [
     {
       "src": "server.js",
       "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "server.js"
-    },
-    {
-      "src": "/admin",
-      "dest": "server.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "server.js"
     }
   ]
 }
