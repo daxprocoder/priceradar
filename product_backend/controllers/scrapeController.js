@@ -1,5 +1,5 @@
 import { scrapeAmazonRequest } from "../utils/scrapeamz.js";
-import { scrapeFlipkartFull } from "../utils/finalflip.js";
+import { scrapeFlipkartSearch } from "../utils/finalflip.js";
 import { extractRelianceInitialState } from "../utils/nodeparserreliance.js";
 
 export const getAllPrices = async (req, res) => {
@@ -12,7 +12,7 @@ export const getAllPrices = async (req, res) => {
         const [amazonResult, flipkartResult, relianceResult] =
             await Promise.allSettled([
                 scrapeAmazonRequest(query),
-                scrapeFlipkartFull(query),
+                scrapeFlipkartSearch(query),
                 extractRelianceInitialState(query)
             ]);
 
