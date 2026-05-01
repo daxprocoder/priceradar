@@ -1,86 +1,220 @@
 import axios from "axios";
-import * as cheerio from "cheerio";
-import { wrapper } from "axios-cookiejar-support";
-import { CookieJar } from "tough-cookie";
+import { computeMatchScore } from "../utils/scoreUtils.js";
+import { isIrrelevantProduct } from "../utils/filterUtils.js";
 
-const jar = new CookieJar();
-const client = wrapper(axios.create({ jar }));
+// Flipkart's internal Rome API — used by their own mobile app
+// Not protected by Akamai, returns clean JSON
+const ROME_API_BASE = "https://2.rome.api.flipkart.com/api/3/page/fetch";
 
 const HEADERS = {
-  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+  "User-Agent": "Flipkart/7.15.0 (Android; 14; Google; Pixel 8; en_IN)",
+  "Accept": "application/json",
   "Accept-Language": "en-IN,en;q=0.9",
   "Accept-Encoding": "gzip, deflate, br",
-  "Sec-Ch-Ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
-  "Sec-Ch-Ua-Mobile": "?0",
-  "Sec-Ch-Ua-Platform": '"Windows"',
-  "Sec-Fetch-Dest": "document",
-  "Sec-Fetch-Mode": "navigate",
-  "Sec-Fetch-Site": "cross-site",
-  "Sec-Fetch-User": "?1",
-  "Upgrade-Insecure-Requests": "1",
-  "Cache-Control": "max-age=0",
-  "Referer": "https://www.google.co.in/",
+  "X-User-Agent": "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36 FKUA/1.0",
+  "Connection": "keep-alive",
 };
 
 /**
- * Scrapes Flipkart for products matching the query using fast HTTP requests.
+ * Extracts product data from a Rome API widget section.
+ */
+function parseRomeProducts(responseData) {
+  const results = [];
+
+  try {
+    // Rome API response structure: pageData -> slots -> widget -> data -> products
+    const slots = responseData?.pageData?.page?.slots || [];
+
+    for (const slot of slots) {
+      const widget = slot?.widget;
+      if (!widget) continue;
+
+      // Products can be nested inside different widget types
+      const products =
+        widget?.data?.products ||
+        widget?.data?.response?.data?.products ||
+        [];
+
+      for (const product of products) {
+        if (results.length >= 10) break;
+
+        const value = product?.value || product;
+        const title =
+          value?.productInfo?.value?.title ||
+          value?.title ||
+          null;
+
+        const priceObj =
+          value?.productInfo?.value?.pricing ||
+          value?.pricing ||
+          null;
+
+        const rawPrice =
+          priceObj?.finalPrice?.decimalValue ||
+          priceObj?.mrp?.decimalValue ||
+          null;
+
+        const image =
+          value?.productInfo?.value?.media?.videos?.[0]?.url ||
+          value?.productInfo?.value?.media?.images?.[0]?.url ||
+          value?.media?.images?.[0]?.url ||
+          null;
+
+        const pid =
+          value?.productInfo?.value?.id ||
+          value?.id ||
+          null;
+
+        const link = pid
+          ? `https://www.flipkart.com/${pid}`
+          : null;
+
+        if (title && rawPrice) {
+          results.push({
+            title,
+            price: parseInt(String(rawPrice).replace(/[^0-9]/g, ""), 10),
+            image: image || null,
+            link: link || "https://www.flipkart.com",
+            store: "Flipkart",
+          });
+        }
+      }
+
+      if (results.length >= 10) break;
+    }
+  } catch (e) {
+    console.error("Flipkart Rome parse error:", e.message);
+  }
+
+  return results;
+}
+
+/**
+ * Scrapes Flipkart for products matching the query using the Rome internal API.
  */
 export const scrapeFlipkartSearch = async (query) => {
-  const url = `https://www.flipkart.com/search?q=${encodeURIComponent(query)}`;
-  
+  const params = new URLSearchParams({
+    q: query,
+    as: "on",
+    "as-show": "on",
+    otracker: "search",
+    otracker1: "search",
+    marketplace: "FLIPKART",
+    "as-pos": "1",
+    "as-type": "RECENT",
+  });
+
+  const url = `${ROME_API_BASE}?${params.toString()}`;
+
   try {
-    const { data } = await client.get(url, { headers: HEADERS });
-    const $ = cheerio.load(data);
-    const results = [];
+    console.log("🛍️ Flipkart Rome API:", url);
+    const { data } = await axios.get(url, { headers: HEADERS, timeout: 12000 });
 
-    // Target the main product containers in Flipkart's new layout
-    $(".tUxRFH, ._75W9jW, ._1AtVbE, div[data-id]").each((i, el) => {
-      if (results.length >= 10) return;
+    const results = parseRomeProducts(data);
 
-      const title = $(el).find(".KzDlHZ, .RG5Slk, .wjcEIp, ._4rR01T").first().text().trim();
-      const priceRaw = $(el).find(".Nx9bqj, ._30jeq3").first().text().trim();
-      const image = $(el).find("img").first().attr("src");
-      const link = $(el).find("a").first().attr("href");
+    if (results.length > 0) {
+      console.log(`✅ Flipkart Rome: ${results.length} products found`);
 
-      if (title && priceRaw) {
-        results.push({
-          title,
-          price: priceRaw,
-          image: image || "https://via.placeholder.com/150",
-          link: link ? (link.startsWith("http") ? link : `https://www.flipkart.com${link}`) : "#",
-          store: "Flipkart",
-        });
-      }
-    });
+      // Rank by match score and return best match
+      const ranked = results
+        .filter((r) => r.title && !isIrrelevantProduct(r.title))
+        .map((r) => ({ ...r, matchScore: computeMatchScore(r.title, query) }))
+        .sort((a, b) => b.matchScore - a.matchScore);
 
-    return results;
+      console.log("🎯 Best Flipkart Match:", ranked[0]?.title);
+      return ranked[0] || null;
+    }
+
+    // Fallback: try the HTML search page JSON embed
+    console.log("🔄 Rome API returned no results, trying fallback...");
+    return await flipkartFallback(query);
+
   } catch (error) {
-    console.error("Flipkart Scrape Error:", error.message);
-    return [];
+    console.error("Flipkart Rome API Error:", error.message);
+    // Try fallback on error
+    try {
+      return await flipkartFallback(query);
+    } catch (fallbackErr) {
+      console.error("Flipkart Fallback Error:", fallbackErr.message);
+      return null;
+    }
   }
 };
 
 /**
+ * Fallback: use Flipkart's search-suggest/autocomplete API which is less protected.
+ */
+async function flipkartFallback(query) {
+  const url = `https://www.flipkart.com/api/4/page/fetch?q=${encodeURIComponent(query)}&as=on&as-show=on&otracker=search&marketplace=FLIPKART`;
+
+  const fallbackHeaders = {
+    "User-Agent": "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-IN,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Referer": "https://www.flipkart.com/",
+    "X-User-Agent": "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/124.0.0.0 Mobile Safari/537.36 FKUA/1.0",
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-origin",
+  };
+
+  console.log("🔄 Flipkart fallback URL:", url);
+  const { data } = await axios.get(url, { headers: fallbackHeaders, timeout: 12000 });
+  const results = parseRomeProducts(data);
+
+  if (results.length > 0) {
+    const ranked = results
+      .filter((r) => r.title && !isIrrelevantProduct(r.title))
+      .map((r) => ({ ...r, matchScore: computeMatchScore(r.title, query) }))
+      .sort((a, b) => b.matchScore - a.matchScore);
+    console.log("🎯 Flipkart Fallback Match:", ranked[0]?.title);
+    return ranked[0] || null;
+  }
+
+  return null;
+}
+
+/**
  * Detailed Scrape for a single product URL (for Active Alerts)
+ * Uses Flipkart's product page JSON API.
  */
 export const scrapeProductDetails = async (productUrl) => {
   try {
-    const { data } = await client.get(productUrl, { headers: HEADERS });
-    const $ = cheerio.load(data);
-    
-    const title = $(".VU-Z7G, ._2NKhZn").first().text().trim();
-    const price = $(".Nx9bqj.C_PkhZ, ._30jeq3._16Jk6d").first().text().trim();
-    const image = $("img.DByo4Z, img._396csV").first().attr("src");
+    // Extract product ID from URL
+    const pidMatch = productUrl.match(/\/p\/(itm[a-zA-Z0-9]+)/);
+    const pid = pidMatch ? pidMatch[1] : null;
 
-    return {
-      title,
-      price: price ? parseInt(price.replace(/[^0-9]/g, "")) : null,
-      image,
-      url: productUrl
-    };
+    if (!pid) {
+      console.error("Could not extract PID from URL:", productUrl);
+      return null;
+    }
+
+    const apiUrl = `https://2.rome.api.flipkart.com/api/3/page/fetch?pid=${pid}`;
+    const { data } = await axios.get(apiUrl, { headers: HEADERS, timeout: 12000 });
+
+    const slots = data?.pageData?.page?.slots || [];
+    for (const slot of slots) {
+      const value = slot?.widget?.data?.productInfo?.value;
+      if (!value) continue;
+
+      const title = value?.title;
+      const rawPrice = value?.pricing?.finalPrice?.decimalValue;
+      const image = value?.media?.images?.[0]?.url;
+
+      if (title && rawPrice) {
+        return {
+          title,
+          price: parseInt(String(rawPrice).replace(/[^0-9]/g, ""), 10),
+          image: image || null,
+          url: productUrl,
+        };
+      }
+    }
+
+    return null;
   } catch (error) {
-    console.error("Detail Scrape Error:", error.message);
+    console.error("Flipkart Detail Scrape Error:", error.message);
     return null;
   }
 };
