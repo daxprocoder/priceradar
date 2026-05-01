@@ -12,6 +12,7 @@ import scrapeRoutes from "./routes/scrapeRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import alertRoutes from "./routes/alertRoutes.js";
 
 dotenv.config();
 
@@ -49,6 +50,7 @@ app.use("/api/scrape", scrapeRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/alerts", alertRoutes);
 
 // ─── SERVE ADMIN UI ────────────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);

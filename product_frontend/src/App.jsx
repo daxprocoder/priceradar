@@ -80,18 +80,31 @@ function App() {
     localStorage.setItem("pr_alerts", JSON.stringify(priceAlerts));
   }, [priceAlerts]);
 
-  const handleAddAlert = () => {
+  const handleAddAlert = async () => {
     if (!alertTarget) return;
-    const newAlert = {
-      ...alertTarget,
-      targetPrice: alertTarget.effectivePrice,
-      checkInterval: alertInterval,
-      lastChecked: new Date().toISOString(),
-      priceHistory: [{ price: alertTarget.effectivePrice, date: new Date().toISOString() }]
-    };
-    setPriceAlerts([...priceAlerts, newAlert]);
-    setAlertTarget(null);
-    setActiveView("alerts");
+    
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("pr_token");
+      const response = await axios.post("https://priceradar-rose.vercel.app/api/alerts/create", {
+        productUrl: alertTarget.link,
+        checkInterval: alertInterval,
+        initialPrice: alertTarget.effectivePrice,
+        title: alertTarget.title,
+        image: alertTarget.image,
+        store: alertTarget.store || "Flipkart"
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      setPriceAlerts([...priceAlerts, response.data.alert]);
+      setAlertTarget(null);
+      setActiveView("alerts");
+    } catch (err) {
+      console.error("Failed to initialize radar:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Background Check Simulation
