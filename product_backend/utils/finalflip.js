@@ -108,7 +108,7 @@ export const scrapeFlipkartSearch = async (query) => {
 
   try {
     console.log("🛍️ Flipkart Rome API:", url);
-    const { data } = await axios.get(url, { headers: HEADERS, timeout: 12000 });
+    const { data } = await axios.get(url, { headers: HEADERS, timeout: 3000 });
 
     const results = parseRomeProducts(data);
 
@@ -160,7 +160,7 @@ async function flipkartFallback(query) {
   };
 
   console.log("🔄 Flipkart fallback URL:", url);
-  const { data } = await axios.get(url, { headers: fallbackHeaders, timeout: 12000 });
+  const { data } = await axios.get(url, { headers: fallbackHeaders, timeout: 3000 });
   const results = parseRomeProducts(data);
 
   if (results.length > 0) {
@@ -191,7 +191,7 @@ export const scrapeProductDetails = async (productUrl) => {
     }
 
     const apiUrl = `https://2.rome.api.flipkart.com/api/3/page/fetch?pid=${pid}`;
-    const { data } = await axios.get(apiUrl, { headers: HEADERS, timeout: 12000 });
+    const { data } = await axios.get(apiUrl, { headers: HEADERS, timeout: 3000 });
 
     const slots = data?.pageData?.page?.slots || [];
     for (const slot of slots) {
