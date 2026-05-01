@@ -51,12 +51,21 @@ app.use("/api/user", userRoutes);
 app.use("/api/admin", adminRoutes);
 
 // ─── SERVE ADMIN UI ────────────────────────────────────────────────────────
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 app.get("/admin", (req, res) => {
-  const filePath = path.resolve(process.cwd(), "admin.html");
+  const filePath = path.join(__dirname, "admin.html");
   if (fs.existsSync(filePath)) {
     res.sendFile(filePath);
   } else {
-    res.status(404).send("admin.html not found");
+    // Fallback for Vercel file structure
+    const vercelPath = path.join(process.cwd(), "product_backend", "admin.html");
+    if (fs.existsSync(vercelPath)) {
+      res.sendFile(vercelPath);
+    } else {
+      res.status(404).send(`admin.html not found. Checked: ${filePath} and ${vercelPath}`);
+    }
   }
 });
 

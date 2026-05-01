@@ -7,7 +7,7 @@ import axios from 'axios';
 // Dev: use relative URL → Vite proxy forwards to Netlify (no CORS)
 // Prod/Mobile: use full URL directly
 const isNativeOrProd = import.meta.env.PROD;
-const BASE = "https://priceradar-j3op.onrender.com";
+const BASE = "https://priceradar-rose.vercel.app";
 const API_URL = `${BASE}/api/auth`;
 
 const WORLD_MAP = [
