@@ -1,17 +1,21 @@
-import { TrendingDown } from 'lucide-react';
+import { TrendingDown, Heart, Bell } from 'lucide-react';
 
-function ProductList({ products, query, searchquery, loading }) {
+function ProductList({ products, query, searchquery, loading, favorites, setFavorites, onSetAlert }) {
   if (loading) {
     return (
-      <div className="mt-1 w-full flex items-center">
-        <div className="mt-10 w-full flex flex-wrap justify-center gap-6">
-          <div role="status" className="max-w-sm p-4 rounded-sm shadow-sm animate-pulse md:p-6">
-            <div className="flex items-center justify-center h-48 mb-4 bg-gray-300 rounded-sm dark:bg-gray-700"></div>
-            <div className="h-2.5 bg-gray-200 rounded-full dark:bg-gray-700 w-48 mb-4"></div>
-            <div className="h-2 bg-gray-200 rounded-full dark:bg-gray-700 mb-2.5"></div>
-            <div className="h-2 bg-gray-200 rounded-full dark:bg-gray-700"></div>
-            <span className="sr-only">Loading...</span>
-          </div>
+      <div className="mt-12 w-full flex flex-col items-center gap-8">
+        <div className="font-mono text-[#00ff9d] text-xs animate-pulse tracking-[0.4em]">
+          // INITIALIZING_SCAN_PROTOCOLS...
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-7xl mx-auto">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-neutral-900/20 border border-neutral-900 p-8 h-[400px] animate-pulse flex flex-col gap-4">
+              <div className="w-full h-48 bg-neutral-900"></div>
+              <div className="h-4 bg-neutral-900 w-3/4"></div>
+              <div className="h-4 bg-neutral-900 w-1/2"></div>
+              <div className="mt-auto h-10 bg-neutral-900 w-full"></div>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -21,7 +25,12 @@ function ProductList({ products, query, searchquery, loading }) {
 
   // ✅ Compute effective price for each product before sorting
   const productsWithEffectivePrice = products.map((p) => {
-    let basePrice = parseFloat(p.discountAmount?.toString().replace(/[₹,]/g, "")) || p.price || Infinity;
+    let rawPrice = p.price;
+    if (typeof rawPrice === 'string') {
+      rawPrice = parseFloat(rawPrice.replace(/[₹,]/g, "")) || 0;
+    }
+    
+    let basePrice = p.discountAmount || rawPrice || Infinity;
     let effectivePrice = basePrice;
 
     // If it's a Flipkart and Amazon product and has offers → pick the *lowest* FinalPrice
@@ -43,7 +52,7 @@ function ProductList({ products, query, searchquery, loading }) {
     // }
 
 
-    return { ...p, effectivePrice };
+    return { ...p, effectivePrice, rawPrice };
   });
 
   // ✅ Sort all products by effectivePrice ascending
@@ -56,8 +65,8 @@ function ProductList({ products, query, searchquery, loading }) {
   return (
     <div className="mt-1 w-full flex flex-col items-center">
       {!loading && (
-        <h2 className="text-lg font-semibold text-gray-800 mt-4" style={{ color: '#00ffdd', fontFamily: 'monospace', letterSpacing: '0.05em' }}>
-          {`Results for: "${searchquery}"`}
+        <h2 className="text-[#00ff9d] font-mono text-[10px] tracking-[0.3em] uppercase mb-8">
+          // SCAN_RESULTS: {searchquery || "NULL"}
         </h2>
       )}
       {/* No changes needed here */}
@@ -67,204 +76,120 @@ function ProductList({ products, query, searchquery, loading }) {
 
           let offers = p.offers || [];
 
-          
-
           return (
             <div
               key={i}
-              className="p-6 rounded-3xl transition-all duration-300 hover:scale-105"
-              style={{
-                backgroundColor: 'rgba(0, 50, 30, 0.4)',
-                border: '3px solid rgb(0, 255, 221)',
-                borderRadius: '30px',
-                boxShadow: isLowest ? '0 0 30px rgba(255, 150, 0, 0.6), inset 0 0 30px rgba(0, 255, 157, 0.1)' : '0 0 30px rgba(0, 255, 157, 0.4), inset 0 0 30px rgba(0, 255, 157, 0.1)',
-                backdropFilter: 'blur(10px)',
-                width: '320px'
-              }}
+              className="relative group bg-[#0a0a0a] border border-neutral-900 transition-all duration-500 hover:border-[#00ff9d]/50 w-full max-w-sm overflow-hidden"
             >
-              {/* Product Image */}
-              <div className="flex justify-center mb-4">
-                <div
-                  className="w-40 h-40 rounded-xl overflow-hidden"
-                  style={{
-                    border: '2px solid #00ff9d',
-                    boxShadow: '0 0 15px rgba(0, 255, 157, 0.3)'
-                  }}
-                >
-                  <img
-                    src={p.image}
-                    alt={p.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              </div>
+              {/* Scanline effect on hover */}
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#00ff9d]/5 to-transparent -translate-y-full group-hover:translate-y-full transition-transform duration-1000 pointer-events-none opacity-20"></div>
 
-              {/* Product Name */}
-              <h3
-                className="text-lg font-bold text-center mb-2 line-clamp-2"
-                style={{
-                  color: '#00ffdd',
-                  fontFamily: 'monospace',
-                  textShadow: '0 0 10px rgba(0, 255, 221, 0.5)'
-                }}
-              >
-                {p.title}
-              </h3>
-
-              {/* Store Name */}
-              <p
-                className="text-center text-sm mb-4"
-                style={{
-                  color: '#00ff9d',
-                  fontFamily: 'monospace'
-                }}
-              >
-                {p.site}
-              </p>
-
-              {
-                p.Unavailable && (
-                  <p className="text-center text-sm mb-4" style={{ color: 'red', fontFamily: 'monospace' }}>
-                    Unavailable
-                  </p>
-                )
-              }
-
-              <div className="mb-4 text-center">
-                {offers.length > 0 && (
-                  <p className="text-sm line-through mb-1" title={p.oldPrice}
-                    style={{ color: '#666' }}
-                  >
-                    {p.price.toLocaleString("en-IN", {
-                      style: "currency",
-                      currency: "INR",
-                      minimumFractionDigits: 0,
-                      maximumFractionDigits: 0
-                    })}
-                  </p>
-                )}
-
-                {/* Amazon old price */}
-                {/* {p.site?.toLowerCase().includes("amazon") && p.newPrice && (
-                  <p className="text-sm text-gray-500 line-through">
-                    {p.price}
-                  </p>
-                )} */}
-
-                {/* ✅ Display Effective Price */}
-                <p
-                  className={`text-xl font-bold ${isLowest ? "text-green-700" : "text-green-600"}`}
-                  title={`Effective Price: ₹${p.effectivePrice.toLocaleString("en-IN", {
-                    style: "currency",
-                    currency: "INR",
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0
-                  })}`}
-                  style={{
-                    color: '#00ffdd',
-                    textShadow: '0 0 15px rgba(0, 255, 221, 0.5)'
-                  }}
-                >
-                  {p.effectivePrice.toLocaleString("en-IN", {
-                    style: "currency",
-                    currency: "INR",
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0
-                  })}
-                </p>
-
-                {isLowest && (
-                  <div
-                    className="inline-flex items-center gap-1 mt-2 px-3 py-1 rounded-full text-xs"
-                    style={{
-                      backgroundColor: 'rgba(255, 150, 0, 0.2)',
-                      border: '1px solid #ff9600',
-                      color: '#ff9600'
-                    }}
-                  >
-                    <TrendingDown size={14} />
-                    Best Deal
+              <div className="p-6">
+                {/* Product Header: Site & Image */}
+                <div className="flex justify-between items-start mb-6">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] font-mono text-neutral-500 tracking-widest uppercase">NODE_SOURCE</span>
+                    <span className="text-white font-mono text-xs tracking-tighter uppercase">{p.site}</span>
                   </div>
-                )}
-
-                {/* ✅ Show offers if available */}
-                {Array.isArray(p.offers) && p.offers.length > 0 && (
-                  <div className="mb-4">
-                    <p
-                      className="text-sm font-bold mb-2"
-                      style={{
-                        color: '#00ffdd',
-                        fontFamily: 'monospace'
-                      }}
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => onSetAlert(p)}
+                      className="p-1.5 text-neutral-600 hover:text-[#00ff9d] transition-colors"
                     >
-                      Available Offers:
-                    </p>
-                    <div className="space-y-1 overflow-y-auto">
-                    {p.offers.map((offer, idx) => {
-                      const finalPrice = offer.discountAmount || 0;
-                      return (
-                        <div 
-                          key={idx}
-                          className="flex justify-between text-xs"
-                          style={{
-                            color: '#00ff9d',
-                            fontFamily: 'monospace'
-                          }}
-                        >
-                          <span>{offer.offerTitle}</span>
-                          <span>₹{finalPrice.toLocaleString("en-IN")}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  </div>
-                )}
-
-                {/* ✅ Show Cashbacks if available*/}
-                {Array.isArray(p.cashback) && p.cashback.length > 0 && (
-                  <div className="mb-4">
-                    <p
-                      className="text-sm font-bold mb-2"
-                      style={{
-                        color: '#00ffdd',
-                        fontFamily: 'monospace'
+                      <Bell size={14} />
+                    </button>
+                    <button 
+                      onClick={() => {
+                        const isFav = favorites.some(f => f.link === p.link);
+                        if (isFav) {
+                          setFavorites(favorites.filter(f => f.link !== p.link));
+                        } else {
+                          setFavorites([...favorites, p]);
+                        }
                       }}
+                      className={`p-1.5 transition-colors ${favorites.some(f => f.link === p.link) ? "text-red-500" : "text-neutral-600 hover:text-white"}`}
                     >
-                      Available Cashbacks:
-                    </p>
-                    <div className="space-y-1 overflow-y-auto">
-                    {p.cashback.map((cb, idx) => {
-                      return (
-                        <div
-                          key={idx}
-                          className="flex justify-between text-xs"
-                          style={{
-                            color: '#00ff9d',
-                            fontFamily: 'monospace'
-                          }}
-                        >
-                          <span>{cb.provider}</span>
-                          <span>₹{cb.amount.toLocaleString("en-IN")}</span>
-                        </div>
-                      );
-                    })}
+                      <Heart size={14} fill={favorites.some(f => f.link === p.link) ? "currentColor" : "transparent"} />
+                    </button>
                   </div>
                 </div>
-              )}
 
-                <a
-                  href={p.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={`inline-block mt-3 text-sm px-4 py-2 rounded-lg transition ${isLowest
-                    ? "bg-green-600 hover:bg-green-700 text-white"
-                    : "bg-blue-600 hover:bg-blue-700 text-white"
-                    }`}
-                  title="View Deal"
-                  aria-label={`View deal for ${p.title}`}
-                >
-                  View Deal
-                </a>
+                {/* Product Image Wrapper */}
+                <div className="relative mb-6 flex justify-center">
+                  <div className="w-48 h-48 bg-neutral-950 border border-neutral-900 group-hover:border-[#00ff9d]/20 transition-colors p-4">
+                    <img
+                      src={p.image}
+                      alt={p.title}
+                      className="w-full h-full object-contain grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500"
+                    />
+                  </div>
+                  {/* Decorative corners */}
+                  <div className="absolute -top-1 -left-1 w-2 h-2 border-t border-l border-neutral-800 group-hover:border-[#00ff9d]"></div>
+                  <div className="absolute -bottom-1 -right-1 w-2 h-2 border-b border-r border-neutral-800 group-hover:border-[#00ff9d]"></div>
+                </div>
+
+                {/* Product Info */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-white font-medium text-sm line-clamp-2 mb-1 tracking-tight">
+                      {p.title}
+                    </h3>
+                    {p.Unavailable && (
+                      <span className="text-red-500 font-mono text-[10px] tracking-widest uppercase animate-pulse">! OFFLINE</span>
+                    )}
+                  </div>
+
+                  <div className="flex items-end justify-between border-t border-neutral-900 pt-4">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-mono text-neutral-500 tracking-widest uppercase mb-1">UNIT_COST</span>
+                      <div className="flex items-baseline gap-2">
+                        <span 
+                          className="font-bold text-xl tracking-tighter"
+                          title={`Effective Price: ₹${p.effectivePrice.toLocaleString("en-IN")}`}
+                          style={{
+                            color: isLowest ? '#00ff9d' : 'white',
+                            textShadow: isLowest ? '0 0 15px rgba(0, 255, 157, 0.3)' : 'none'
+                          }}
+                        >
+                          {p.effectivePrice.toLocaleString("en-IN", {
+                            style: "currency",
+                            currency: "INR",
+                            minimumFractionDigits: 0,
+                          })}
+                        </span>
+                        {p.rawPrice > p.effectivePrice && (
+                          <span className="text-neutral-600 line-through text-xs font-mono">
+                             ₹{p.rawPrice.toLocaleString("en-IN")}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <a
+                      href={p.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="group/btn relative px-4 py-2 border border-neutral-800 hover:border-[#00ff9d] transition-all duration-300"
+                    >
+                      <span className="relative z-10 text-white group-hover/btn:text-[#00ff9d] font-mono text-[10px] tracking-widest uppercase">
+                        INIT_DEAL
+                      </span>
+                    </a>
+                  </div>
+                </div>
+
+                {/* Technical data fold (offers/cashback) */}
+                {(Array.isArray(p.offers) && p.offers.length > 0) && (
+                  <div className="mt-4 pt-4 border-t border-neutral-900 space-y-1">
+                    <span className="text-[9px] font-mono text-neutral-600 tracking-widest uppercase block mb-2">AVAILABLE_PROTOCOLS</span>
+                    {p.offers.slice(0, 2).map((offer, idx) => (
+                      <div key={idx} className="flex justify-between text-[10px] font-mono text-neutral-400">
+                        <span className="truncate pr-4 uppercase opacity-60">{offer.offerTitle}</span>
+                        <span className="text-[#00ff9d]">-₹{offer.discountAmount}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           );

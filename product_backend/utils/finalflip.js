@@ -2,6 +2,7 @@ import axios from "axios";
 import * as cheerio from "cheerio";
 import dotenv from "dotenv";
 import {isIrrelevantProduct} from "./filterUtils.js";
+// Puppeteer removed from top level to prevent Netlify crashes
 
 dotenv.config();
 // import fs from "fs";
@@ -67,15 +68,43 @@ function extractLID(url) {
 // --------------------------------------------------------------
 async function scrapeFlipkartSearch(query) {
     const url = `https://www.flipkart.com/search?q=${encodeURIComponent(query)}`;
-    const res = await axios.get(url, { headers: DESKTOP_HEADERS });
+    
+    let html = "";
+    try {
+        // Try axios first
+        const res = await axios.get(url, { headers: DESKTOP_HEADERS });
+        html = res.data;
+    } catch (err) {
+        if (err.response && err.response.status === 403) {
+            console.log("⚠️ 403 Forbidden. Using Puppeteer fallback for Flipkart Search...");
+            try {
+                const puppeteer = (await import("puppeteer-extra")).default;
+                const StealthPlugin = (await import("puppeteer-extra-plugin-stealth")).default;
+                puppeteer.use(StealthPlugin());
+                const browser = await puppeteer.launch({ 
+                    headless: "new",
+                    args: ["--no-sandbox", "--disable-setuid-sandbox"] 
+                });
+                const page = await browser.newPage();
+                await page.setUserAgent(DESKTOP_HEADERS["User-Agent"]);
+                await page.goto(url, { waitUntil: "domcontentloaded" });
+                html = await page.content();
+                await browser.close();
+            } catch (pErr) {
+                console.error("Puppeteer fallback failed on Netlify (Size limits/missing binaries).", pErr.message);
+                throw new Error("Flipkart blocked request and Puppeteer is unavailable on this serverless environment.");
+            }
+        } else {
+            throw err;
+        }
+    }
 
-    console.log("Response Data:",res.status)
-    const $ = cheerio.load(res.data);
+    const $ = cheerio.load(html);
     const results = [];
 
     $("div[data-id]").each((_, el) => {
-        const title = $(el).find(".RG5Slk").text().trim();
-        const price = $(el).find(".hZ3P6w.DeU9vF").text().trim();
+        const title = $(el).find(".KzDlHZ").text().trim() || $(el).find(".RG5Slk").text().trim() || $(el).find(".wjcEIp").text().trim();
+        const price = $(el).find(".Nx9bqj._4b5DiR").text().trim() || $(el).find(".hZ3P6w.DeU9vF").text().trim() || $(el).find(".Nx9bqj").text().trim();
         const link = $(el).find("a").attr("href");
         const image = $(el).find("img").attr("src");
 

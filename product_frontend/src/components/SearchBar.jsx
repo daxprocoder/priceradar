@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { Search } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 
 function SearchBar({ setProducts, setQuery, query,setSearchquery, loading, setLoading }) {
   const [suggestions, setSuggestions] = useState([]);
@@ -97,7 +98,26 @@ function SearchBar({ setProducts, setQuery, query,setSearchquery, loading, setLo
     setLoading(true);
 
     try {
-      const res = await axios.get(`/api/scrape?query=${encodeURIComponent(value)}`);
+      // 10.0.2.2 works ONLY for Android emulator, using local IP makes it work on physical devices too.
+      // Use relative URL in dev (Vite proxy) → full URL in prod/native (no CORS issue)
+      const isNative = Capacitor.isNativePlatform();
+      const apiBase = (import.meta.env.PROD || isNative) ? "https://itspriceradar.netlify.app" : "";
+      const apiUrl = `${apiBase}/api/scrape?query=${encodeURIComponent(value)}`;
+        
+      const res = await axios.get(apiUrl);
+
+      // Log search to backend for admin history tracking
+      try {
+        const token = localStorage.getItem("pr_token");
+        if (token) {
+          await axios.post(
+            `${apiBase}/api/user/history`,
+            { query: value },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+        }
+      } catch (_) {} // Non-blocking — don't crash if logging fails
+
       const sites = ["amazon", "flipkart", "reliance"];
 
       const formatted = sites
@@ -121,6 +141,8 @@ function SearchBar({ setProducts, setQuery, query,setSearchquery, loading, setLo
       setProducts(formatted);
     } catch (err) {
       console.error("Scrape error:", err);
+      // Set an empty state or error indication if needed
+      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -135,7 +157,7 @@ function SearchBar({ setProducts, setQuery, query,setSearchquery, loading, setLo
 
     return parts.map((p, idx) =>
       regex.test(p) ? (
-        <span key={idx} className="font-semibold text-green-600">
+        <span key={idx} className="text-[#00ff9d]">
           {p}
         </span>
       ) : (
@@ -159,62 +181,48 @@ function SearchBar({ setProducts, setQuery, query,setSearchquery, loading, setLo
       }}
     >
       <label
-        className="block text-lg mb-3"
-        style={{
-          color: "#00ffdd",
-          fontFamily: "monospace",
-          letterSpacing: "0.05em",
-        }}
+        className="block text-[#00ff9d] font-mono text-[10px] tracking-[0.3em] uppercase mb-3 ml-1"
         htmlFor="search"
       >
-        Search Product
+        // INITIATE_PRODUCT_SCAN
       </label>
 
-      <div className="relative">
+      <div className="relative group">
         {/* INPUT */}
         <input
           type="text"
           id="search"
-          className="w-full px-6 py-4 text-white text-lg outline-none bg-transparent"
-          placeholder="Search for a mobile"
+          className="w-full px-6 py-5 text-white text-base outline-none bg-neutral-900/50 border border-neutral-800 rounded-none transition-all duration-300 focus:border-[#00ff9d] focus:bg-neutral-900/80 font-mono tracking-tight"
+          placeholder="ENTER_MODEL_IDENTIFIER..."
           value={query}
           onChange={(e) => {
             setBlockSuggest(false);
             setQuery(e.target.value);
           }}
           onKeyDown={handleKeyDown}
-          style={{
-            backgroundColor: "rgba(0, 100, 100, 0.3)",
-            border: "2px solid #00ffdd",
-            borderRadius: "8px",
-            boxShadow:
-              "0 0 20px rgba(0, 255, 221, 0.3), inset 0 0 20px rgba(0, 255, 221, 0.1)",
-            fontFamily: "monospace",
-          }}
         />
+        
+        {/* Glowing edge on focus */}
+        <div className="absolute bottom-0 left-0 h-[1px] bg-[#00ff9d] w-0 group-focus-within:w-full transition-all duration-500 shadow-[0_0_10px_#00ff9d]"></div>
 
         {/* Search Button */}
         <button
           onClick={() => handleSearch(query)}
-          className="absolute right-4 top-1/2 transform -translate-y-1/2 hover:scale-110 transition-transform hover:cursor-pointer"
-          style={{ color: "#00ffdd" }}
+          className="absolute right-2 top-1/2 transform -translate-y-1/2 p-3 text-neutral-500 hover:text-[#00ff9d] transition-colors disabled:opacity-30"
           disabled={!query || loading}
         >
-          <Search size={24} />
+          <Search size={18} strokeWidth={1.5} />
         </button>
       </div>
 
       {/* SUGGESTIONS */}
       {(suggestions.length > 0 || suggestLoading) && (
-        <ul
-          className="absolute border w-full mt-2 rounded-lg shadow-xl max-h-60 overflow-y-auto z-10"
-          style={{ backgroundColor:'rgba(0, 100, 100, 1)' }}
-        >
+        <ul className="absolute w-full mt-1 bg-[#0a0a0a] border border-neutral-800 shadow-2xl max-h-72 overflow-y-auto z-50 rounded-none divide-y divide-neutral-900">
           {/* Loading spinner */}
           {suggestLoading && (
-            <li className="px-4 py-3 text-white flex gap-3 items-center">
-              <div className="w-5 h-5 border-2 border-[#00ff9d] border-t-transparent animate-spin rounded-full"></div>
-              Searching…
+            <li className="px-6 py-4 text-[#00ff9d] font-mono text-xs flex gap-4 items-center">
+              <div className="w-3 h-3 border border-[#00ff9d] border-t-transparent animate-spin rounded-full"></div>
+              ACCESSING_DATABASE...
             </li>
           )}
 
@@ -222,9 +230,9 @@ function SearchBar({ setProducts, setQuery, query,setSearchquery, loading, setLo
             suggestions.map((s, i) => (
               <li
                 key={i}
-                tabIndex={0} // required for focus-trap
-                className={`px-4 py-2 cursor-pointer flex items-center gap-3 ${
-                  i === activeIndex ? "bg-green-100" : "hover:bg-green-50"
+                tabIndex={0}
+                className={`px-6 py-3 cursor-pointer flex items-center gap-4 transition-colors ${
+                  i === activeIndex ? "bg-neutral-900" : "hover:bg-neutral-900/50"
                 }`}
                 onMouseDown={() => {
                   setBlockSuggest(true);
@@ -232,21 +240,15 @@ function SearchBar({ setProducts, setQuery, query,setSearchquery, loading, setLo
                   setSuggestions([]);
                   handleSearch(s.name);
                 }}
-                // on hover change activeIndex
                 onMouseEnter={() => setActiveIndex(i)}
-
               >
                 {s.img && (
-                  <img src={s.img} alt={s.name} className="w-10 h-10 rounded" />
+                  <div className="w-8 h-8 rounded-none overflow-hidden border border-neutral-800 shrink-0">
+                    <img src={s.img} alt={s.name} className="w-full h-full object-cover grayscale opacity-70" />
+                  </div>
                 )}
 
-                <span
-                  className={`${
-                    i === activeIndex
-                      ? "text-green-800 font-semibold"
-                      : "text-gray-300"
-                  }`}
-                >
+                <span className={`font-mono text-xs tracking-tight ${i === activeIndex ? "text-[#00ff9d]" : "text-neutral-400"}`}>
                   {highlightText(s.name, query)}
                 </span>
               </li>

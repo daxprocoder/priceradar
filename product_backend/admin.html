@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PRICERADAR // COMMAND_CENTER</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Space Mono',monospace;background:#020202;color:#fff;min-height:100vh;}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:#0a0a0a;}
+::-webkit-scrollbar-thumb{background:#00ff9d33;}
+
+.grid-bg{
+  background-image:linear-gradient(rgba(0,255,157,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,157,0.04) 1px,transparent 1px);
+  background-size:40px 40px;
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+}
+.scan-line{position:fixed;left:0;width:100%;height:2px;background:linear-gradient(90deg,transparent,#00ff9d55,transparent);animation:scanAnim 6s linear infinite;z-index:1;pointer-events:none;}
+@keyframes scanAnim{0%{top:-2px}100%{top:100%}}
+.content{position:relative;z-index:2;}
+
+/* Login */
+.login-box{border:1px solid #1a1a1a;border-left:3px solid #00ff9d;background:rgba(8,8,8,0.95);backdrop-filter:blur(10px);}
+.input-field{background:transparent;border:none;border-bottom:1px solid #2a2a2a;color:#fff;width:100%;padding:12px 0;font-family:'Space Mono',monospace;font-size:12px;letter-spacing:1px;transition:border-color 0.3s;}
+.input-field:focus{outline:none;border-color:#00ff9d;}
+.input-field::placeholder{color:#444;}
+.btn-primary{background:#00ff9d;color:#000;font-family:'Space Mono',monospace;font-weight:700;letter-spacing:3px;border:none;cursor:pointer;transition:all 0.3s;font-size:11px;}
+.btn-primary:hover{background:#fff;}
+.btn-danger{background:transparent;border:1px solid #ff004433;color:#ff0044;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2px;cursor:pointer;transition:all 0.2s;padding:8px 16px;}
+.btn-danger:hover{background:#ff0044;color:#fff;}
+.btn-outline{background:transparent;border:1px solid #00ff9d33;color:#00ff9d;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2px;cursor:pointer;transition:all 0.2s;padding:8px 16px;}
+.btn-outline:hover{background:#00ff9d11;}
+
+/* Cards */
+.stat-card{background:rgba(8,8,8,0.95);border:1px solid #1a1a1a;border-top:2px solid;}
+.tbl-row:hover{background:rgba(0,255,157,0.03);}
+.badge-ok{background:#00ff9d22;color:#00ff9d;border:1px solid #00ff9d44;font-size:9px;padding:2px 8px;letter-spacing:1px;}
+.badge-pending{background:#ff004422;color:#ff4466;border:1px solid #ff004444;font-size:9px;padding:2px 8px;letter-spacing:1px;}
+.section-title{color:#00ff9d;font-size:10px;letter-spacing:4px;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
+.section-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,#00ff9d22,transparent);}
+
+/* Tabs */
+.tab-btn{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2px;padding:8px 20px;background:transparent;border:1px solid #1a1a1a;color:#555;cursor:pointer;transition:all 0.2s;}
+.tab-btn.active{border-color:#00ff9d55;color:#00ff9d;background:#00ff9d0a;}
+.tab-btn:hover{border-color:#333;color:#aaa;}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+
+/* Pulse */
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.animate-pulse{animation:pulse 2s infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.animate-spin{animation:spin 1s linear infinite;}
+
+/* Toast */
+#toast{position:fixed;bottom:24px;right:24px;background:#0a0a0a;border:1px solid #00ff9d44;color:#00ff9d;font-size:10px;letter-spacing:2px;padding:12px 20px;z-index:9999;display:none;transition:all 0.3s;}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="scan-line"></div>
+<div id="toast"></div>
+
+<!-- ═══════════════════════ LOGIN SCREEN ═══════════════════════ -->
+<div id="login-screen" class="content flex items-center justify-center min-h-screen p-6">
+  <div class="login-box w-full max-w-md p-10 relative">
+    <div class="absolute top-0 right-0 text-[8px] text-neutral-800 p-2">PROTOCOL: AES-256 // JWT</div>
+    
+    <div class="text-center mb-10">
+      <div class="inline-flex items-center justify-center w-14 h-14 border border-[#00ff9d33] mb-5 relative">
+        <div class="w-2 h-2 bg-[#00ff9d] absolute animate-pulse"></div>
+        <div class="w-6 h-6 border border-[#00ff9d66] absolute animate-spin" style="animation-duration:3s"></div>
+        <span class="text-[#00ff9d] font-bold text-xs z-10">PR</span>
+      </div>
+      <h1 class="text-2xl font-bold tracking-[4px] text-white">COMMAND CENTER</h1>
+      <p class="text-neutral-600 text-[9px] tracking-[3px] mt-2">// RESTRICTED ACCESS</p>
+    </div>
+
+    <div class="space-y-8">
+      <div>
+        <label class="text-[9px] text-neutral-600 tracking-[3px] block mb-2">OPERATOR_ID</label>
+        <input class="input-field" type="email" id="loginEmail" placeholder="admin@priceradar.io" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div>
+        <label class="text-[9px] text-neutral-600 tracking-[3px] block mb-2">ACCESS_CODE</label>
+        <input class="input-field" type="password" id="loginPass" placeholder="••••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div id="loginError" class="hidden text-[10px] text-red-500 border border-red-900/30 p-3 bg-red-900/10 tracking-widest">
+        ⚠ ACCESS_DENIED: CREDENTIALS_INVALID
+      </div>
+      <button class="btn-primary w-full py-4 tracking-[4px]" id="loginBtn" onclick="doLogin()">
+        INITIATE_SESSION
+      </button>
+    </div>
+    
+    <div class="mt-10 flex justify-between text-[8px] text-neutral-800">
+      <span class="animate-pulse">⬤ SYSTEM_ONLINE</span>
+      <span>PRICERADAR_V4 &copy; 2026</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ DASHBOARD ═══════════════════════ -->
+<div id="dashboard-screen" class="content hidden min-h-screen">
+
+  <!-- Top Bar -->
+  <div class="border-b border-neutral-900 px-8 py-4 flex items-center justify-between bg-black/50 sticky top-0 backdrop-blur z-10">
+    <div class="flex items-center gap-4">
+      <div class="bg-[#00ff9d] text-black font-black px-2 py-0.5 text-sm tracking-tight">PR</div>
+      <div>
+        <h1 class="text-sm font-bold tracking-[3px]">PRICERADAR COMMAND</h1>
+        <p class="text-[8px] text-neutral-600 tracking-[2px]">// TACTICAL_OPERATIONS_CENTER</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-4">
+      <span class="text-[9px] text-[#00ff9d] flex items-center gap-2 animate-pulse"><span class="w-1.5 h-1.5 bg-[#00ff9d] rounded-full inline-block"></span>RADAR_LIVE</span>
+      <button class="btn-outline" onclick="loadAll()">↺ REFRESH</button>
+      <button class="btn-danger" onclick="doLogout()">LOGOUT</button>
+    </div>
+  </div>
+
+  <div class="px-8 py-8 space-y-10">
+
+    <!-- Stat Cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="stat-card p-6" style="border-top-color:#00ff9d">
+        <p class="text-[9px] text-neutral-600 tracking-[3px] mb-3">TOTAL_OPERATORS</p>
+        <div id="s-total" class="text-3xl font-bold text-[#00ff9d]">--</div>
+        <div class="mt-4 h-0.5 bg-neutral-900"><div class="h-0.5 bg-[#00ff9d] w-2/3"></div></div>
+      </div>
+      <div class="stat-card p-6" style="border-top-color:#00d2ff">
+        <p class="text-[9px] text-neutral-600 tracking-[3px] mb-3">VERIFIED_USERS</p>
+        <div id="s-verified" class="text-3xl font-bold text-[#00d2ff]">--</div>
+        <div class="mt-4 h-0.5 bg-neutral-900"><div class="h-0.5 bg-[#00d2ff] w-1/2"></div></div>
+      </div>
+      <div class="stat-card p-6" style="border-top-color:#ff0055">
+        <p class="text-[9px] text-neutral-600 tracking-[3px] mb-3">SAVED_PRODUCTS</p>
+        <div id="s-alerts" class="text-3xl font-bold text-[#ff0055]">--</div>
+        <div class="mt-4 h-0.5 bg-neutral-900"><div class="h-0.5 bg-[#ff0055] w-1/3"></div></div>
+      </div>
+      <div class="stat-card p-6" style="border-top-color:#ffd700">
+        <p class="text-[9px] text-neutral-600 tracking-[3px] mb-3">SYSTEM_STATUS</p>
+        <div id="s-status" class="text-base font-bold text-[#ffd700] mt-3">STABLE</div>
+        <div class="text-[8px] text-neutral-700 mt-2">NODE: <span id="s-node">--</span></div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div>
+      <div class="flex gap-2 mb-6 flex-wrap">
+        <button class="tab-btn active" onclick="switchTab('users', this)">OPERATORS_LOG</button>
+        <button class="tab-btn" onclick="switchTab('history', this)">SEARCH_INTEL</button>
+        <button class="tab-btn" onclick="switchTab('feed', this)">SYSTEM_FEED</button>
+      </div>
+
+      <!-- Users Tab -->
+      <div class="tab-content active" id="tab-users">
+        <div class="section-title mb-6">RECENT_OPERATOR_ACTIVITY</div>
+        <div class="overflow-x-auto border border-neutral-900">
+          <table class="w-full text-left">
+            <thead>
+              <tr class="bg-[#0a0a0a] text-[9px] text-neutral-600 tracking-[3px]">
+                <th class="p-4 border-b border-neutral-900">EMAIL</th>
+                <th class="p-4 border-b border-neutral-900">CODENAME</th>
+                <th class="p-4 border-b border-neutral-900">STATUS</th>
+                <th class="p-4 border-b border-neutral-900">JOINED</th>
+                <th class="p-4 border-b border-neutral-900">LAST_LOGIN</th>
+              </tr>
+            </thead>
+            <tbody id="user-table" class="text-[11px]">
+              <tr><td colspan="5" class="p-8 text-center text-neutral-700 text-[10px]">LOADING_OPERATOR_DATA...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Search History Tab -->
+      <div class="tab-content" id="tab-history">
+        <div class="section-title mb-6">SEARCH_INTELLIGENCE_FEED</div>
+        <div id="history-list" class="space-y-2">
+          <div class="p-8 text-center text-neutral-700 text-[10px] border border-neutral-900">LOADING_INTEL...</div>
+        </div>
+      </div>
+
+      <!-- Feed Tab -->
+      <div class="tab-content" id="tab-feed">
+        <div class="section-title mb-6">LIVE_SYSTEM_COMM_FEED</div>
+        <div id="feed-list" class="border border-neutral-900">
+          <div class="p-8 text-center text-neutral-700 text-[10px]">INITIALIZING_FEED...</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const BASE = window.location.origin + "/api/admin";
+let token = localStorage.getItem("pr_admin_token");
+
+function showToast(msg){
+  const t=document.getElementById("toast");
+  t.textContent=msg; t.style.display="block";
+  setTimeout(()=>t.style.display="none",3000);
+}
+
+if(token){showDashboard();}
+
+async function doLogin(){
+  const email=document.getElementById("loginEmail").value;
+  const pass=document.getElementById("loginPass").value;
+  const btn=document.getElementById("loginBtn");
+  const err=document.getElementById("loginError");
+  err.classList.add("hidden");
+  btn.textContent="SYNCING...";
+  try{
+    const r=await fetch(`${BASE}/login`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password:pass})});
+    const d=await r.json();
+    if(d.token){
+      localStorage.setItem("pr_admin_token",d.token);
+      token=d.token;
+      showDashboard();
+    }else{
+      err.classList.remove("hidden");
+      btn.textContent="INITIATE_SESSION";
+    }
+  }catch(e){
+    err.textContent="⚠ CONNECTION_FAILED: "+e.message;
+    err.classList.remove("hidden");
+    btn.textContent="INITIATE_SESSION";
+  }
+}
+
+function showDashboard(){
+  document.getElementById("login-screen").classList.add("hidden");
+  document.getElementById("dashboard-screen").classList.remove("hidden");
+  loadAll();
+}
+
+async function loadAll(){
+  try{
+    const r=await fetch(`${BASE}/stats`,{headers:{"Authorization":"Bearer "+token}});
+    if(r.status===401||r.status===403){doLogout();return;}
+    const d=await r.json();
+    const s=d.stats;
+    document.getElementById("s-total").textContent=s.totalUsers;
+    document.getElementById("s-verified").textContent=s.verifiedUsers;
+    document.getElementById("s-alerts").textContent=s.activeAlerts;
+    document.getElementById("s-status").textContent=s.systemStatus;
+    document.getElementById("s-node").textContent=s.nodeVersion;
+
+    // User table
+    const tbody=document.getElementById("user-table");
+    if(!d.recentUsers||!d.recentUsers.length){
+      tbody.innerHTML='<tr><td colspan="5" class="p-8 text-center text-neutral-700 text-[10px]">NO_OPERATORS_FOUND</td></tr>';
+    }else{
+      tbody.innerHTML=d.recentUsers.map(u=>`
+        <tr class="tbl-row border-b border-neutral-900">
+          <td class="p-4 text-neutral-400">${u.email}</td>
+          <td class="p-4 text-white font-bold">${u.name||'<span class="text-neutral-700">ANONYMOUS</span>'}</td>
+          <td class="p-4"><span class="${u.isVerified?'badge-ok':'badge-pending'}">${u.isVerified?'VERIFIED':'PENDING'}</span></td>
+          <td class="p-4 text-neutral-600">${new Date(u.createdAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</td>
+          <td class="p-4 text-neutral-600">${u.lastLogin?new Date(u.lastLogin).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):'NEVER'}</td>
+        </tr>`).join('');
+    }
+
+    // Search history across all users
+    const histDiv=document.getElementById("history-list");
+    if(!d.searchHistory||!d.searchHistory.length){
+      histDiv.innerHTML='<div class="p-8 text-center text-neutral-700 text-[10px] border border-neutral-900">NO_SEARCH_LOGS</div>';
+    }else{
+      histDiv.innerHTML=d.searchHistory.map(h=>`
+        <div class="flex items-center gap-6 border border-neutral-900 p-4 hover:border-[#00ff9d22] transition-colors">
+          <span class="text-[#00ff9d] text-[9px] tracking-widest shrink-0">SCAN</span>
+          <span class="text-white text-xs flex-1">${h.query}</span>
+          <span class="text-neutral-600 text-[9px]">${h.userEmail||''}</span>
+          <span class="text-neutral-700 text-[9px] shrink-0">${h.timestamp?new Date(h.timestamp).toLocaleString('en-IN'):''}</span>
+        </div>`).join('');
+    }
+
+    // Feed
+    const feedDiv=document.getElementById("feed-list");
+    const feedItems=[
+      {label:"DATABASE_SYNC",color:"#00ff9d"},
+      {label:"CORS_HANDSHAKE_OK",color:"#00d2ff"},
+      {label:"JWT_TOKENS_VALID",color:"#00ff9d"},
+      {label:"SMTP_RELAY_READY",color:"#ffd700"},
+      {label:"RADAR_ENGINE_STABLE",color:"#00ff9d"},
+    ];
+    const now=new Date();
+    feedDiv.innerHTML=feedItems.map((f,i)=>`
+      <div class="flex gap-6 items-center px-6 py-3 border-b border-neutral-900 last:border-0">
+        <span class="text-neutral-700 text-[9px] tracking-widest shrink-0">${new Date(now-i*60000).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span>
+        <span class="text-[9px]" style="color:${f.color}">${f.label}</span>
+      </div>`).join('');
+    
+    showToast("// INTEL_SYNCED");
+  }catch(e){
+    showToast("ERR: "+e.message);
+  }
+}
+
+function switchTab(name, btn){
+  document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+  document.querySelectorAll(".tab-content").forEach(c=>c.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("tab-"+name).classList.add("active");
+}
+
+function doLogout(){
+  localStorage.removeItem("pr_admin_token");
+  token=null;
+  document.getElementById("dashboard-screen").classList.add("hidden");
+  document.getElementById("login-screen").classList.remove("hidden");
+}
+</script>
+</body>
+</html>
