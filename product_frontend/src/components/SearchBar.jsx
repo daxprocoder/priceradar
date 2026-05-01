@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { Search } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
+import { scrapeFlipkartNative } from "../utils/flipkartScraper";
 
 function SearchBar({ setProducts, setQuery, query,setSearchquery, loading, setLoading }) {
   const [suggestions, setSuggestions] = useState([]);
@@ -101,27 +102,36 @@ function SearchBar({ setProducts, setQuery, query,setSearchquery, loading, setLo
       // 10.0.2.2 works ONLY for Android emulator, using local IP makes it work on physical devices too.
       // Use relative URL in dev (Vite proxy) → full URL in prod/native (no CORS issue)
       const apiBase = "https://priceradar-rose.vercel.app";
-      const apiUrl = `${apiBase}/api/scrape?query=${encodeURIComponent(value)}`;
-        
-      const res = await axios.get(apiUrl);
 
-      // Log search to backend for admin history tracking
+      // Parallize: Backend handles Amazon/Reliance, Frontend handles Flipkart
+      const scrapeTasks = [
+        axios.get(`${apiBase}/api/scrape?query=${encodeURIComponent(value)}`).catch(err => {
+          console.error("Backend scrape failed:", err.message);
+          return { data: {} };
+        }),
+        scrapeFlipkartNative(value)
+      ];
+
+      const [backendRes, nativeFlipkart] = await Promise.all(scrapeTasks);
+
+      // Log search to backend
       try {
         const token = localStorage.getItem("pr_token");
         if (token) {
-          await axios.post(
-            `${apiBase}/api/user/history`,
-            { query: value },
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
+          axios.post(`${apiBase}/api/user/history`, { query: value }, { headers: { Authorization: `Bearer ${token}` } }).catch(()=>{});
         }
-      } catch (_) {} // Non-blocking — don't crash if logging fails
+      } catch (_) {}
 
       const sites = ["amazon", "flipkart", "reliance"];
 
       const formatted = sites
         .map((site) => {
-          const data = res.data[site];
+          // If we got frontend flipkart data, ALWAYS use it!
+          if (site === "flipkart" && nativeFlipkart) {
+            return nativeFlipkart;
+          }
+
+          const data = backendRes.data[site];
           if (!data) return null;
 
           return {
