@@ -1,12 +1,12 @@
 import express from "express";
 import Alert from "../models/Alert.js";
-import { protect } from "../utils/authMiddleware.js";
+import { authenticateToken } from "../utils/authMiddleware.js";
 import { scrapeProductDetails } from "../utils/finalflip.js";
 
 const router = express.Router();
 
 // 1. CREATE ALERT
-router.post("/create", protect, async (req, res) => {
+router.post("/create", authenticateToken, async (req, res) => {
   const { productUrl, checkInterval, initialPrice, title, image, store } = req.body;
 
   try {
@@ -29,7 +29,7 @@ router.post("/create", protect, async (req, res) => {
 });
 
 // 2. GET USER ALERTS
-router.get("/my-alerts", protect, async (req, res) => {
+router.get("/my-alerts", authenticateToken, async (req, res) => {
   try {
     const alerts = await Alert.find({ userId: req.user._id }).sort({ createdAt: -1 });
     res.json(alerts);
@@ -39,7 +39,7 @@ router.get("/my-alerts", protect, async (req, res) => {
 });
 
 // 3. DELETE ALERT
-router.delete("/:id", protect, async (req, res) => {
+router.delete("/:id", authenticateToken, async (req, res) => {
   try {
     await Alert.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
     res.json({ message: "Alert terminated" });
