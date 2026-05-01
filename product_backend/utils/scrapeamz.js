@@ -185,10 +185,13 @@ export const scrapeAmazonRequest = async (query) => {
 
     bestMatch.offers = offers;
     bestMatch.cashback = cashback;
-    bestMatch.price = parseInt(bestMatch.price.replace(/[₹,]/g, ""), 10);
-
-    // console.log("Provider Offers Found:", offers);
-    // console.log("Cashback Offers Found:", cashback);
+    
+    // Safety check: only replace if price exists
+    if (bestMatch.price && typeof bestMatch.price === 'string') {
+      bestMatch.price = parseInt(bestMatch.price.replace(/[₹,]/g, ""), 10);
+    } else if (typeof bestMatch.price !== 'number') {
+      bestMatch.price = 0; // Default if missing
+    }
 
     return bestMatch;
   } catch (err) {
