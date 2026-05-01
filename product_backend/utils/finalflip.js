@@ -37,8 +37,14 @@ function extractLID(url) {
 // SCRAPE SEARCH RESULTS
 // --------------------------------------------------------------
 async function scrapeFlipkartSearchInternal(query) {
-    const url = `https://www.flipkart.com/search?q=${encodeURIComponent(query)}`;
-    const res = await axios.get(url, { headers: DESKTOP_HEADERS, timeout: 12000 });
+    let url = `https://www.flipkart.com/search?q=${encodeURIComponent(query)}`;
+    
+    // Route through ScraperAPI if key is available
+    if (process.env.SCRAPER_API_KEY) {
+        url = `http://api.scraperapi.com?api_key=${process.env.SCRAPER_API_KEY}&url=${encodeURIComponent(url)}&keep_headers=true&premium=true`;
+    }
+
+    const res = await axios.get(url, { headers: DESKTOP_HEADERS, timeout: 15000 });
 
     console.log("Response Data Status:", res.status);
     const $ = cheerio.load(res.data);
@@ -106,6 +112,17 @@ let rt = process.env.FLIP_RT || "";
 let SN = process.env.FLIP_SN || "";
 let S = process.env.FLIP_S || "";
 let vd = process.env.FLIP_VD || "";
+
+// Add Axios Interceptor to route all flipkartAPI traffic through ScraperAPI
+flipkartAPI.interceptors.request.use((config) => {
+    if (process.env.SCRAPER_API_KEY) {
+        const targetUrl = config.baseURL ? `${config.baseURL}${config.url}` : config.url;
+        config.baseURL = ""; // Clear base URL so it doesn't prepend to ScraperAPI
+        config.url = `http://api.scraperapi.com?api_key=${process.env.SCRAPER_API_KEY}&url=${encodeURIComponent(targetUrl)}&keep_headers=true`;
+        console.log(`🛡️ Routing through ScraperAPI: ${targetUrl.split('?')[0]}`);
+    }
+    return config;
+});
 
 flipkartAPI.defaults.headers.Cookie = `ud=${ud}; at=${at}; rt=${rt}; SN=${SN}; S=${S}; vd=${vd};`
     .replace(/\n/g, " ")
@@ -257,7 +274,12 @@ export async function scrapeFlipkartSearch(query) {
 
 export const scrapeProductDetails = async (productUrl) => {
     try {
-        const res = await axios.get(productUrl, { headers: DESKTOP_HEADERS, timeout: 12000 });
+        let url = productUrl;
+        if (process.env.SCRAPER_API_KEY) {
+            url = `http://api.scraperapi.com?api_key=${process.env.SCRAPER_API_KEY}&url=${encodeURIComponent(url)}&keep_headers=true`;
+        }
+
+        const res = await axios.get(url, { headers: DESKTOP_HEADERS, timeout: 15000 });
         const $ = cheerio.load(res.data);
         const title = $(".VU-Z7G, ._2NKhZn, .B_NuCI").first().text().trim();
         const priceRaw = $(".Nx9bqj.C_PkhZ, ._30jeq3._16Jk6d").first().text().trim();
