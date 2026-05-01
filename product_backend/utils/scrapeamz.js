@@ -4,12 +4,20 @@ import { computeMatchScore, filterValidPhones } from "../utils/scoreUtils.js";
 import { isIrrelevantProduct } from "../utils/filterUtils.js";
 
 const headers = {
-  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
   "Accept-Language": "en-IN,en;q=0.9",
-  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+  "Accept-Encoding": "gzip, deflate, br",
   "Referer": "https://www.google.co.in/",
-  "Device-Memory": "8",
-  "Viewport-Width": "1920"
+  "Sec-Ch-Ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+  "Sec-Ch-Ua-Mobile": "?0",
+  "Sec-Ch-Ua-Platform": '"Windows"',
+  "Sec-Fetch-Dest": "document",
+  "Sec-Fetch-Mode": "navigate",
+  "Sec-Fetch-Site": "cross-site",
+  "Sec-Fetch-User": "?1",
+  "Upgrade-Insecure-Requests": "1",
+  "Cache-Control": "max-age=0",
 };
 
 export const scrapeAmazonRequest = async (query) => {
@@ -70,9 +78,20 @@ export const scrapeAmazonRequest = async (query) => {
     // PRODUCT PAGE SCRAPING
     // --------------------------------------------------------
     const mobileHeaders = {
-      "User-Agent":
-        "Mozilla/5.0 (Linux; Android 10; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.5790.110 Mobile Safari/537.36",
+      "User-Agent": "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
       "Accept-Language": "en-IN,en;q=0.9",
+      "Accept-Encoding": "gzip, deflate, br",
+      "Referer": "https://www.amazon.in/",
+      "Sec-Ch-Ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+      "Sec-Ch-Ua-Mobile": "?1",
+      "Sec-Ch-Ua-Platform": '"Android"',
+      "Sec-Fetch-Dest": "document",
+      "Sec-Fetch-Mode": "navigate",
+      "Sec-Fetch-Site": "same-origin",
+      "Sec-Fetch-User": "?1",
+      "Upgrade-Insecure-Requests": "1",
+      "Cache-Control": "max-age=0",
     };
 
     const amazonAPI = axios.create({
@@ -132,7 +151,9 @@ export const scrapeAmazonRequest = async (query) => {
 
     console.log("🔁 Fetching product page:", bestMatch.link);
 
-    const productRes = await axios.get(bestMatch.link, { headers: mobileHeaders });
+    // Strip the full URL query string to get a clean product page URL (avoids referral tokens that trigger bot checks)
+    const cleanProductUrl = bestMatch.link.split('?')[0];
+    const productRes = await axios.get(cleanProductUrl, { headers: mobileHeaders });
     const parsedPage = parse(productRes.data);
 
     const offers = [];
