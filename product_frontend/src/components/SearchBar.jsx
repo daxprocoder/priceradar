@@ -103,37 +103,21 @@ function SearchBar({ setProducts, setQuery, query,setSearchquery, loading, setLo
       // Use relative URL in dev (Vite proxy) → full URL in prod/native (no CORS issue)
       const apiBase = "https://priceradar-rose.vercel.app";
 
-      // Parallize: Backend handles Amazon/Reliance, Frontend handles Flipkart
-      const scrapeTasks = [
-        axios.get(`${apiBase}/api/scrape?query=${encodeURIComponent(value)}`).catch(err => {
-          console.error("Backend scrape failed:", err.message);
-          return { data: {} };
-        }),
-        scrapeFlipkartNative(value)
-      ];
-
-      const [backendRes, nativeFlipkart] = await Promise.all(scrapeTasks);
-
-      // Log search to backend
+      // 1. Fetch Backend (Amazon & Reliance) IMMEDIATELY
+      let backendData = {};
       try {
-        const token = localStorage.getItem("pr_token");
-        if (token) {
-          axios.post(`${apiBase}/api/user/history`, { query: value }, { headers: { Authorization: `Bearer ${token}` } }).catch(()=>{});
-        }
-      } catch (_) {}
+        const res = await axios.get(`${apiBase}/api/scrape?query=${encodeURIComponent(value)}`);
+        backendData = res.data;
+      } catch (err) {
+        console.error("Backend scrape failed:", err.message);
+      }
 
-      const sites = ["amazon", "flipkart", "reliance"];
-
-      const formatted = sites
+      // Format Backend Results
+      const sites = ["amazon", "reliance"];
+      const initialProducts = sites
         .map((site) => {
-          // If we got frontend flipkart data, ALWAYS use it!
-          if (site === "flipkart" && nativeFlipkart) {
-            return nativeFlipkart;
-          }
-
-          const data = backendRes.data[site];
+          const data = backendData[site];
           if (!data) return null;
-
           return {
             site: site.charAt(0).toUpperCase() + site.slice(1),
             title: data.title,
@@ -147,7 +131,33 @@ function SearchBar({ setProducts, setQuery, query,setSearchquery, loading, setLo
         })
         .filter(Boolean);
 
-      setProducts(formatted);
+      // Show Amazon and Reliance immediately!
+      setProducts(initialProducts);
+      setLoading(false); // Stop the loading spinner early
+
+      // Log search to backend
+      try {
+        const token = localStorage.getItem("pr_token");
+        if (token) {
+          axios.post(`${apiBase}/api/user/history`, { query: value }, { headers: { Authorization: `Bearer ${token}` } }).catch(()=>{});
+        }
+      } catch (_) {}
+
+      // 2. Fetch Flipkart (Frontend) IN THE BACKGROUND
+      try {
+        const nativeFlipkart = await scrapeFlipkartNative(value);
+        if (nativeFlipkart) {
+          // Append Flipkart to the list once it's ready
+          setProducts((prev) => {
+            // Check if flipkart is already in there to avoid duplicates
+            if (prev.some(p => p.site.toLowerCase() === 'flipkart')) return prev;
+            return [...prev, nativeFlipkart];
+          });
+        }
+      } catch (err) {
+        console.error("Flipkart background fetch failed:", err);
+      }
+
     } catch (err) {
       console.error("Scrape error:", err);
       // Set an empty state or error indication if needed

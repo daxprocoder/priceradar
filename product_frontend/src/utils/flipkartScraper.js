@@ -27,7 +27,7 @@ export const scrapeFlipkartNative = async (query) => {
       // ON WEB BROWSER: Use a free public CORS proxy to fetch the HTML
       console.log("🌐 Using free Web Proxy for Flipkart...");
       const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-      const response = await axios.get(proxyUrl);
+      const response = await axios.get(proxyUrl, { timeout: 15000 });
       html = response.data.contents;
     }
 
